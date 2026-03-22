@@ -71,7 +71,7 @@ _PIPER_ARM_SCALE_SHIFT = [
 # Gripper scale_shift differs: physical [0.017,0.056] vs normalized [0,1]
 GRIPPER_SCALE_SHIFT = {
     "physical": [0.03857, 0.036329999999999994],  # grasp_anything_ro
-    "normalized": [1.0, 0.5],                      # silk_grasp (sim)
+    "normalized": [1.0, 0.5],  # silk_grasp (sim)
 }
 
 
@@ -80,8 +80,7 @@ def _make_scale_shift(gripper_type="physical"):
     return (_PIPER_ARM_SCALE_SHIFT + [g]) * 2  # left + right
 
 
-def build_transforms(config, mode, urdf, calibration,
-                     gripper_type="physical"):
+def build_transforms(config, mode, urdf, calibration, gripper_type="physical"):
     import numpy as np
 
     from robo_orchard_lab.dataset.horizon_manipulation.transforms import (
