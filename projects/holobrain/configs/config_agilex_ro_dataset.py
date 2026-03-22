@@ -30,6 +30,14 @@ dataset_config = dict(
         urdf="./urdf/piper_description_dualarm.urdf",
         cam_names=["left", "right", "middle"],
     ),
+    silk_grasp=dict(
+        data_paths=[
+            "/moganshan/afs_a/hwk/deformable_bench/data/horizon_dataset/silk_grasp_bimanual_v2",
+        ],
+        urdf="./urdf/piper_description_dualarm.urdf",
+        cam_names=["static_cam", "left_hand_cam", "right_hand_cam"],
+        gripper_type="normalized",
+    ),
 )
 
 
@@ -50,7 +58,30 @@ def expand_ro_data_paths(patterns: list[str]) -> list[str]:
     return sorted(set(paths))
 
 
-def build_transforms(config, mode, urdf, calibration):
+# Piper arm joint scale_shift (shared across all Piper datasets)
+_PIPER_ARM_SCALE_SHIFT = [
+    [1.478021398, 0.10237011399999996],
+    [1.453678296, 1.4043815520000003],
+    [1.553963852, -1.5014923],
+    [1.86969153, -0.0010728060000000372],
+    [1.3381379620000002, -0.012585846000000012],
+    [3.086157592, -0.06803160000000008],
+]
+
+# Gripper scale_shift differs: physical [0.017,0.056] vs normalized [0,1]
+GRIPPER_SCALE_SHIFT = {
+    "physical": [0.03857, 0.036329999999999994],  # grasp_anything_ro
+    "normalized": [1.0, 0.5],                      # silk_grasp (sim)
+}
+
+
+def _make_scale_shift(gripper_type="physical"):
+    g = GRIPPER_SCALE_SHIFT[gripper_type]
+    return (_PIPER_ARM_SCALE_SHIFT + [g]) * 2  # left + right
+
+
+def build_transforms(config, mode, urdf, calibration,
+                     gripper_type="physical"):
     import numpy as np
 
     from robo_orchard_lab.dataset.horizon_manipulation.transforms import (
@@ -90,22 +121,7 @@ def build_transforms(config, mode, urdf, calibration):
     fk_loss_weight = loss_weights * 1.8
     state_loss_weights = state_loss_weights.tolist()
     fk_loss_weight = fk_loss_weight.tolist()
-    joint_scale_shift = [
-        [1.478021398, 0.10237011399999996],
-        [1.453678296, 1.4043815520000003],
-        [1.553963852, -1.5014923],
-        [1.86969153, -0.0010728060000000372],
-        [1.3381379620000002, -0.012585846000000012],
-        [3.086157592, -0.06803160000000008],
-        [0.03857, 0.036329999999999994],
-        [1.478021398, 0.10237011399999996],
-        [1.453678296, 1.4043815520000003],
-        [1.553963852, -1.5014923],
-        [1.86969153, -0.0010728060000000372],
-        [1.3381379620000002, -0.012585846000000012],
-        [3.086157592, -0.06803160000000008],
-        [0.03857, 0.036329999999999994],
-    ]
+    joint_scale_shift = _make_scale_shift(gripper_type)
 
     add_data_relative_items = dict(
         type=AddItems,
@@ -337,6 +353,7 @@ def build_datasets(config, dataset_names, mode, **kwargs):
             mode,
             urdf=data_config["urdf"],
             calibration=data_config.get("calibration"),
+            gripper_type=data_config.get("gripper_type", "physical"),
         )
         dataset = AgilexRODataset(
             paths=expand_ro_data_paths(data_config["data_paths"]),
@@ -372,6 +389,7 @@ def build_processors(config, dataset_names):
             mode="deploy",
             urdf=data_config["urdf"],
             calibration=data_config.get("calibration"),
+            gripper_type=data_config.get("gripper_type", "physical"),
         )
         processor = HoloBrainProcessor(
             HoloBrainProcessorCfg(
