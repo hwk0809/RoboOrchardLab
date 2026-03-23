@@ -71,18 +71,20 @@ def main(args, accelerator):
     build_processors = config.build_processors
     config = config.config
 
-    # export data processors
-    if accelerator.is_main_process:
-        processors = build_processors(config)
-        for dataset_name, processor in processors.items():
-            processor.save(args.workspace, f"{dataset_name}_processor.json")
-
+    # Apply kwargs before build_processors so --kwargs overrides
+    # (e.g. deploy_datasets) take effect for processor export.
     if args.kwargs is not None:
         if os.path.isfile(args.kwargs):
             kwargs = json.load(open(args.kwargs, "r"))
         else:
             kwargs = json.loads(args.kwargs)
         config.update(kwargs)
+
+    # export data processors
+    if accelerator.is_main_process:
+        processors = build_processors(config)
+        for dataset_name, processor in processors.items():
+            processor.save(args.workspace, f"{dataset_name}_processor.json")
 
     if accelerator.is_main_process:
         logger.info("\n" + json.dumps(config, indent=4))
