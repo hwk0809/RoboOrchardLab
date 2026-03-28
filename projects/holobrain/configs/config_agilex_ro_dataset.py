@@ -86,6 +86,7 @@ def build_transforms(config, mode, urdf, calibration, gripper_type="physical"):
     from robo_orchard_lab.dataset.horizon_manipulation.transforms import (
         AddItems,
         CalibrationToExtrinsic,
+        ColorJitter,
         ConvertDataType,
         ExtrinsicNoise,
         GetProjectionMat,
@@ -244,6 +245,13 @@ def build_transforms(config, mode, urdf, calibration, gripper_type="physical"):
             range_h=(-30, 50),
             range_scale=None,
         )
+        color_jitter = dict(
+            type=ColorJitter,
+            brightness=0.3,
+            contrast=0.3,
+            saturation=0.3,
+            hue=0.1,
+        )
         extrinsic_noise = dict(
             type=ExtrinsicNoise,
             noise_range=(0.04, 0.04, 0.04, 0.015, 0.015, 0.015),
@@ -254,6 +262,7 @@ def build_transforms(config, mode, urdf, calibration, gripper_type="physical"):
             random_crop_padding,
             resize,
             to_tensor,
+            color_jitter,
             extrinsic_noise,
             ego_to_cam,
             projection_mat,

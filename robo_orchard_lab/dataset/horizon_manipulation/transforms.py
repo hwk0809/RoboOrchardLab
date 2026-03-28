@@ -25,6 +25,7 @@ from scipy.spatial.transform import Rotation
 
 __all__ = [
     "AddItems",
+    "ColorJitter",
     "ConvertDataType",
     "IdentityTransform",
     "ItemSelection",
@@ -38,6 +39,38 @@ __all__ = [
     "ExtrinsicNoise",
     "RandomCropPaddingResize",
 ]
+
+
+class ColorJitter:
+    """Apply color jitter to RGB images for domain randomization.
+
+    Wraps torchvision.transforms.ColorJitter, handling [N, H, W, C] → [N, C, H, W]
+    conversion. Only affects ``data["imgs"]``; depth maps are untouched.
+
+    Args:
+        brightness: factor range [max(0, 1-v), 1+v] for random brightness.
+        contrast:   factor range [max(0, 1-v), 1+v] for random contrast.
+        saturation: factor range [max(0, 1-v), 1+v] for random saturation.
+        hue:        offset range [-v, v] for random hue shift (in [-0.5, 0.5]).
+    """
+
+    def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
+        from torchvision.transforms import ColorJitter as _ColorJitter
+
+        self._jitter = _ColorJitter(
+            brightness=brightness,
+            contrast=contrast,
+            saturation=saturation,
+            hue=hue,
+        )
+
+    def __call__(self, data):
+        if "imgs" not in data:
+            return data
+        imgs = data["imgs"]  # [N, H, W, C] torch tensor (uint8 or float)
+        imgs = self._jitter(imgs.permute(0, 3, 1, 2))  # → [N, C, H, W]
+        data["imgs"] = imgs.permute(0, 2, 3, 1)  # → [N, H, W, C]
+        return data
 
 
 class MoveEgoToCam:
