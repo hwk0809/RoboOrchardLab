@@ -35,7 +35,10 @@ dataset_config = dict(
             "/moganshan/afs_a/hwk/deformable_bench/data/horizon_dataset/silk_grasp_bimanual_v2",
         ],
         urdf="./urdf/piper_description_dualarm.urdf",
-        cam_names=["static_cam", "left_hand_cam", "right_hand_cam"],
+        # Order matches pretrain `grasp_anything_ro` (["left", "right", "middle"])
+        # so VLM positional priors transfer: position 0 = left wrist,
+        # position 1 = right wrist, position 2 = middle static.
+        cam_names=["left_hand_cam", "right_hand_cam", "static_cam"],
         gripper_type="normalized",
     ),
 )
@@ -68,10 +71,13 @@ _PIPER_ARM_SCALE_SHIFT = [
     [3.086157592, -0.06803160000000008],
 ]
 
-# Gripper scale_shift differs: physical [0.017,0.056] vs normalized [0,1]
+# Gripper scale_shift: must produce encoded value in [-1, +1] to match the
+# pretrain (`physical` maps raw [0, 0.075]m -> encoded ~[-0.94, +1.00]).
+# `encoded = (raw - shift) / scale`, so for raw in [0, 1] we want
+# scale=0.5, shift=0.5 -> encoded in [-1, +1].
 GRIPPER_SCALE_SHIFT = {
     "physical": [0.03857, 0.036329999999999994],  # grasp_anything_ro
-    "normalized": [1.0, 0.5],  # silk_grasp (sim)
+    "normalized": [0.5, 0.5],  # silk_grasp (sim/real both pre-normalized to [0,1])
 }
 
 
