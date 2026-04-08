@@ -251,12 +251,13 @@ def build_transforms(config, mode, urdf, calibration, gripper_type="physical"):
             range_h=(-30, 50),
             range_scale=None,
         )
+        # TODO(光照修复后): brightness 改回 0.3, 恢复对称范围
         color_jitter = dict(
             type=ColorJitter,
-            brightness=0.3,
+            brightness=0.25,  # [0.75,1.25] sim偏亮7-8%, 临时压暗
             contrast=0.3,
             saturation=0.3,
-            hue=0.1,
+            hue=0.15,         # ±54°: covers cross-camera bias (R-G range=32) + right_hand flicker
         )
         extrinsic_noise = dict(
             type=ExtrinsicNoise,
