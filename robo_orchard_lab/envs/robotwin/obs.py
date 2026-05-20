@@ -72,25 +72,23 @@ def get_observation_cams(obs: dict) -> dict:
         }
 
     Each camera data dict follows the same format as described
-    in `convert_camera_data`.
+    in `get_camera_data`.
+
+    Example output structure::
+
+        {
+            "camera_name_1": {
+                "rgb": BatchCameraData,
+                "depth": BatchCameraData,
+            },
+            "camera_name_2": {
+                "rgb": BatchCameraData,
+            },
+            ...
+        }
 
     Returns:
-        dict: A dictionary where keys are camera names and values
-            are the converted camera data in BatchCameraData format.
-            For example:
-
-            .. code-block:: text
-
-                {
-                    "camera_name_1": {
-                        "rgb": BatchCameraData,
-                        "depth": BatchCameraData,
-                    },
-                    "camera_name_2": {
-                        "rgb": BatchCameraData,
-                    },
-                    ...
-                }
+        dict: Mapping from camera name to converted BatchCameraData entries.
 
     """
     ret = {}
@@ -104,30 +102,34 @@ def get_camera_data(
 ) -> dict[str, BatchCameraData]:
     """Convert camera data from dict to BatchCameraData.
 
-    This function assumes the input camera dict has the following keys
-    - "rgb": (H, W, 3) np.ndarray, optional
-    - "depth": (H, W) np.ndarray, optional
-    - "intrinsic_cv": (3, 3) np.ndarray
-    - "extrinsic_cv": (4, 4) np.ndarray, world to camera
+        This function assumes the input camera dict has the following keys:
+
+        - ``rgb``: ``(H, W, 3)`` np.ndarray, optional.
+        - ``depth``: ``(H, W)`` np.ndarray, optional.
+        - ``intrinsic_cv``: ``(3, 3)`` np.ndarray.
+        - ``extrinsic_cv``: ``(4, 4)`` np.ndarray camera extrinsic matrix.
+            Uses the OpenCV convention. It encodes the camera pose in the
+            world frame after inversion.
 
     Args:
         cam (dict): Camera data in dict format.
         camera_name (str): Name of the camera.
 
     Returns:
-        dict[str, BatchCameraData]: Converted camera data.
-            The keys can be "rgb" and/or "depth", depending on the input.
+        dict[str, BatchCameraData]: Converted camera data keyed by stream type.
 
     """
-    world2cam = torch.eye(4).reshape(1, 4, 4)
-    world2cam[0, :3, :] = torch.from_numpy(cam["extrinsic_cv"])
-    cam2world = Transform3D_M(matrix=world2cam).inverse()
+    # `extrinsic_cv` follows the external OpenCV camera extrinsic
+    # convention. Invert it here to build the camera pose in world.
+    world_to_camera_mat = torch.eye(4).reshape(1, 4, 4)
+    world_to_camera_mat[0, :3, :] = torch.from_numpy(cam["extrinsic_cv"])
+    camera_in_world = Transform3D_M(matrix=world_to_camera_mat).inverse()
     assert check_valid_rotation_matrix(
-        cam2world.get_matrix()[:, :3, :3], tol=1e-5
-    ), "Invalid cam2world rotation matrix"
+        camera_in_world.get_matrix()[:, :3, :3], tol=1e-5
+    ), "Invalid camera_in_world rotation matrix"
     cam_tf = BatchFrameTransform(
-        xyz=cam2world.get_translation(),
-        quat=cam2world.get_rotation_quaternion(),
+        xyz=camera_in_world.get_translation(),
+        quat=camera_in_world.get_rotation_quaternion(),
         parent_frame_id="world",
         child_frame_id=camera_name,
     )

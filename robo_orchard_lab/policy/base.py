@@ -15,7 +15,7 @@
 # permissions and limitations under the License.
 from __future__ import annotations
 import copy
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import gymnasium as gym
 import torch
@@ -27,11 +27,14 @@ from robo_orchard_core.policy.base import (
 )
 from robo_orchard_core.utils.config import ClassType_co, ConfigInstanceOf
 
-from robo_orchard_lab.inference.mixin import (
+from robo_orchard_lab.pipeline.inference.mixin import (
     InferencePipelineMixin,
     InferencePipelineMixinCfg,
 )
-from robo_orchard_lab.utils.state import State, StateSaveLoadMixin
+from robo_orchard_lab.utils.state import (
+    State,
+    StateSaveLoadMixin,
+)
 
 __all__ = [
     "InferencePipelinePolicy",
@@ -42,13 +45,13 @@ __all__ = [
 
 
 class PolicyMixin(StateSaveLoadMixin, _PolicyMixin[OBSType, ACTType]):
-    """A base class for policies with state save/load capability."""
+    """Base policy contract with canonical State-based recovery support."""
 
     def _get_state(self) -> State:
         """Get the state of the object for saving."""
         # pull out cfg from state for better clarity
         ret = super()._get_state()
-        ret.config = ret.state.pop("cfg", None)
+        ret.config = cast(Any, ret.state.pop("cfg", None))
         return ret
 
     def _set_state(self, state: State) -> None:
@@ -59,12 +62,15 @@ class PolicyMixin(StateSaveLoadMixin, _PolicyMixin[OBSType, ACTType]):
         super()._set_state(state)
 
     def to(self, device: torch.device | str):
-        """Moves the pipeline to the specified device.
+        """Move the policy to the specified device.
 
         Args:
-            device (str): The target device to move the model to.
+            device (torch.device | str): The target device.
         """
-        pass
+        raise NotImplementedError(
+            f"{type(self).__name__}.to() must be implemented by concrete "
+            "policy classes."
+        )
 
 
 PolicyType = TypeVar("PolicyType", bound=PolicyMixin, covariant=True)
@@ -80,15 +86,24 @@ class PolicyConfig(_PolicyConfig[PolicyType]):
 class InferencePipelinePolicy(PolicyMixin[OBSType, ACTType]):
     """A policy that uses an inference pipeline to generate actions.
 
+    This adapter keeps both persistence surfaces exposed by the wrapped
+    pipeline stack:
+
+    - :class:`StateSaveLoadMixin` ``save`` / ``load`` snapshot the runtime
+      object state of the policy and its nested pipeline.
+    - ``pipeline.save_pipeline`` / ``pipeline.load_pipeline`` manage exported
+      inference artifacts such as model weights and config files.
+
     Args:
         cfg (InferencePipelinePolicyCfg): The configuration for the policy.
         observation_space (gym.Space | None, optional): The observation space
             of the environment. Defaults to None.
         action_space (gym.Space | None, optional): The action space of
             the environment. Defaults to None.
-        pipeline (InferencePipelineMixin| None, optional): The inference
-            pipeline to use. If None, it will be created from the
-            configuration. If provided,  Defaults to None.
+        pipeline (robo_orchard_lab.pipeline.inference.mixin.
+            InferencePipelineMixin | None, optional): The inference pipeline
+            to use. If None, it will be created from the configuration. If
+            provided, Defaults to None.
     """
 
     cfg: InferencePipelinePolicyCfg
@@ -139,7 +154,10 @@ class InferencePipelinePolicy(PolicyMixin[OBSType, ACTType]):
     ):
         self.observation_space = observation_space
         self.action_space = action_space
-        if pipeline.cfg != cfg.pipeline_cfg:
+        if (
+            pipeline.cfg is not cfg.pipeline_cfg
+            and pipeline.cfg != cfg.pipeline_cfg
+        ):
             raise ValueError(
                 "The pipeline's cfg does not match the policy's pipeline_cfg. "
                 f"Got pipeline.cfg: {pipeline.cfg}, "
@@ -170,14 +188,20 @@ class InferencePipelinePolicy(PolicyMixin[OBSType, ACTType]):
         action = self.pipeline(obs)
         return action
 
-    def reset(self) -> None:
-        self.pipeline.reset()
-
-    def to(self, device: torch.device | str):
-        """Moves the pipeline to the specified device.
+    def reset(self, **kwargs) -> None:
+        """Reset policy runtime state and forward pipeline reset kwargs.
 
         Args:
-            device (str): The target device to move the model to.
+            kwargs: Keyword arguments consumed by the wrapped pipeline reset
+                hook or by concrete subclasses that extend this adapter.
+        """
+        self.pipeline.reset(**kwargs)
+
+    def to(self, device: torch.device | str):
+        """Move the wrapped pipeline to the specified device.
+
+        Args:
+            device (torch.device | str): The target device.
         """
         self.pipeline.to(device)
 

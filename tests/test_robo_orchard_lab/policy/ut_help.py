@@ -14,14 +14,18 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 from __future__ import annotations
+import copy
 from typing import Any
 
 import torch
-from robo_orchard_core.envs.env_base import EnvBase, EnvBaseCfg
 from robo_orchard_core.utils.config import ClassType
 
-from robo_orchard_lab.metrics.base import MetricConfig
+from robo_orchard_lab.envs.base import EnvBase, EnvBaseCfg
+from robo_orchard_lab.metrics.base import (
+    MetricConfig,
+)
 from robo_orchard_lab.policy.base import PolicyConfig, PolicyMixin
+from robo_orchard_lab.utils.state import StateSaveLoadMixin
 
 
 class DummyEnv(EnvBase):
@@ -30,6 +34,7 @@ class DummyEnv(EnvBase):
     def __init__(self, cfg: DummyEnvConfig) -> None:
         self.cfg = cfg
         self.step_count = 0
+        self.finalize_episode_calls = 0
 
     def reset(self, **kwargs):
         self.step_count = 0
@@ -53,6 +58,9 @@ class DummyEnv(EnvBase):
     def close(self):
         pass
 
+    def finalize_episode(self) -> None:
+        self.finalize_episode_calls += 1
+
     def num_envs(self) -> int:
         return 1
 
@@ -67,19 +75,24 @@ class DummyPolicy(PolicyMixin):
     cfg: DummyPolicyConfig
 
     data: torch.Tensor | None
+    last_reset_kwargs: dict[str, Any]
 
     def __init__(self, cfg: DummyPolicyConfig, *args, **kwargs) -> None:
         self.cfg = cfg
         self.data = None
+        self.last_reset_kwargs = {}
 
     def reset(self, **kwargs) -> None:
-        pass
+        self.last_reset_kwargs = dict(kwargs)
 
     def act(self, obs):
         # return obs with policy data
         ret = {"data": self.data}
         ret.update(obs)
         return ret
+
+    def to(self, device: torch.device | str):
+        del device
 
     def close(self) -> None:
         pass
@@ -89,7 +102,7 @@ class DummyPolicyConfig(PolicyConfig[DummyPolicy]):
     class_type: ClassType[DummyPolicy] = DummyPolicy
 
 
-class DummySuccessRateMetric:
+class DummySuccessRateMetric(StateSaveLoadMixin):
     cfg: DummySuccessRateMetricConfig
 
     def __init__(self, cfg: DummySuccessRateMetricConfig) -> None:
@@ -98,6 +111,7 @@ class DummySuccessRateMetric:
         self.episode_count = 0
 
     def reset(self, **kwargs) -> None:
+        del kwargs
         self.success_count = 0
         self.episode_count = 0
 
@@ -118,8 +132,14 @@ class DummySuccessRateMetric:
     def to(self, *args, **kwargs):
         pass
 
+    def _get_state(self) -> dict[str, object]:
+        return {
+            "success_count": self.success_count,
+            "episode_count": self.episode_count,
+        }
 
-class DummyPolicyDataMetric:
+
+class DummyPolicyDataMetric(StateSaveLoadMixin):
     cfg: DummySuccessRateMetricConfig
     data: Any
 
@@ -127,7 +147,8 @@ class DummyPolicyDataMetric:
         self.cfg = cfg
         self.data = None
 
-    def reset(self) -> None:
+    def reset(self, **kwargs) -> None:
+        del kwargs
         self.data = None
 
     def update(self, action, step_ret) -> None:
@@ -141,6 +162,9 @@ class DummyPolicyDataMetric:
 
     def to(self, *args, **kwargs):
         pass
+
+    def _get_state(self) -> dict[str, object]:
+        return {"data": copy.deepcopy(self.data)}
 
 
 class DummySuccessRateMetricConfig(MetricConfig[Any]):

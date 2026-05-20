@@ -27,7 +27,6 @@ from robo_orchard_core.datatypes import (
     BatchFrameTransform,
     BatchTransform3D,
 )
-from robo_orchard_core.envs.env_base import EnvBase, EnvBaseCfg, EnvStepReturn
 from robo_orchard_core.envs.task import TaskInfo
 from robo_orchard_core.kinematics.chain import KinematicChain
 from robo_orchard_core.utils.config import ClassType
@@ -42,6 +41,7 @@ from robosuite.environments.base import MujocoEnv
 from robosuite.utils.binding_utils import MjSim
 from typing_extensions import Literal
 
+from robo_orchard_lab.envs.base import EnvBase, EnvBaseCfg, EnvStepReturn
 from robo_orchard_lab.envs.libero.obs import (
     get_camera_data,
     get_joints,
@@ -218,7 +218,7 @@ class LiberoEnv(EnvBase):
 
         This is the default action type for LiberoEnv, but users can also
         choose to use the target end-effector pose as action by setting
-        `use_action_type` to "osc_delta_pose" in the config.
+        `use_action_type` to "orchard_osc_target_eef" in the config.
         In that case, the action should be a 7-dimensional vector representing
         the target end-effector pose (x, y, z, q_w, q_x, q_y, q_z) in world
         frame, followed by gripper command.
@@ -261,8 +261,7 @@ class LiberoEnv(EnvBase):
             "types are supported."
         )
 
-        # handle osc_delta_pose action type: convert the target
-        # pose to osc delta pose
+        # Convert the target pose to the OSC delta action expected by Libero.
         if action.shape[-1] != 8:
             raise ValueError(
                 "For 'orchard_osc_target_eef' action type, "

@@ -21,9 +21,14 @@ recommonmark>=0.7.1
 furo>=2024.8.6
 sphinx-markdown-tables>=0.0.17
 matplotlib
+timm
 interrogate
 myst-parser
 nbsphinx
+# nbsphinx 0.9.x still imports nbconvert's rst template at module import time.
+# nbconvert 7 removed that template layout, so keep the docs toolchain on the
+# last compatible major version until nbsphinx usage is updated.
+nbconvert<7
 sphinx_copybutton
 sphinx_codeautolink
 jinja2
@@ -48,6 +53,7 @@ pyright[nodejs]
 # build
 packaging>=25.0
 twine>=6.1.0
+requests-toolbelt>=1.0.0
 setuptools>=77.0.3,<80.0.0
 
 # numpy

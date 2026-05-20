@@ -18,7 +18,8 @@ import os
 import re
 
 rule = (
-    "^(feat|fix|bugfix|docs|style|refactor|perf|test|chore|scm)\(.*\): [A-Z].*"  # noqa
+    r"^(feat|fix|bugfix|docs|style|refactor|perf|test|chore|scm)"
+    r"\(.*\): [A-Z].*"
 )
 
 error_hint = """
@@ -28,14 +29,14 @@ Merge Request Title Validation Failed:
 
 The title does not comply with rule: {rule}
 
-Required Format: <type>(<scope>): <description>
+Required Format: <type>(<scope>): <Description>
 
 Examples:
 feat(api): Implement new authentication module
 
 Validation Checklist:
-1. Valid type? (feat|fix|bugfix|docs|style|perf|refactor|test|chore)
-2. Description starts with capital letter
+1. Valid type? (feat|fix|bugfix|docs|style|perf|refactor|test|chore|scm)
+2. Description starts with an uppercase letter
 3. Colon has spaces on both sides
 4. Contains non-ASCII characters
 """  # noqa

@@ -14,25 +14,25 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 import os
+import sys
+from pathlib import Path
 
 import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+repo_root = str(REPO_ROOT)
+if repo_root in sys.path:
+    sys.path.remove(repo_root)
+sys.path.insert(0, repo_root)
 
 
 @pytest.fixture()
 def PROJECT_ROOT() -> str:
     """Fixture to provide the project root directory."""
 
-    # Get the absolute path of the current file
-    current_file = os.path.abspath(__file__)
-
-    # Traverse up the directory tree to find the project root
-    project_root = os.path.dirname(current_file)
-    for _ in range(2):
-        project_root = os.path.dirname(project_root)
-
-    return project_root
+    return str(REPO_ROOT)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def ROBO_ORCHARD_TEST_WORKSPACE() -> str:
     return os.environ["ROBO_ORCHARD_TEST_WORKSPACE"]

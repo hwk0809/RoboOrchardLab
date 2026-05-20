@@ -214,6 +214,7 @@ if __name__ == "__main__":
         "huggingface_hub",
         "cloudpickle",
         "pyzstd",
+        "websockets>=10.0",
         # metric
         "torchmetrics>=1.6",
         "datasets>=4.0.0",
@@ -232,19 +233,19 @@ if __name__ == "__main__":
         # Do not delete the line below, just comment it out and add the
         # new line.
         # "robo_orchard_core==0.4.0",
-        "robo_orchard_core@git+https://github.com/HorizonRobotics/robo_orchard_core.git@ae83c81b8b37ab9a99f4d0c4d994eac4f492e1ee",
+        "robo_orchard_core@git+https://github.com/HorizonRobotics/robo_orchard_core.git@a6e0ab724fdafc05246f2bebe012dc7e4f4bc569",
     ]
     # optional dependencies
     extras_require = {
         "bip3d": [
-            "transformers<=4.49.0",
+            "transformers>=4.49.0,<=5.8.0",
             "peft>=0.17.0",
             "terminaltables",
             "pytorch3d",
             "ninja",
         ],
         "sem": [
-            "transformers<=4.57.1",
+            "transformers>=4.49.0,<=5.8.0",
             "pytorch3d>=0.7.8",
             "pytorch-kinematics",
             "ninja",
@@ -254,7 +255,7 @@ if __name__ == "__main__":
         ],
         "holobrain_0": [
             "torch>=2.6.0",
-            "transformers<=4.57.1",
+            "transformers>=4.49.0,<=5.8.0",
             "pytorch3d>=0.7.8",
             "pytorch-kinematics",
             "ninja",
@@ -273,7 +274,8 @@ if __name__ == "__main__":
             "mcap>=1.2.2",
             "foxglove-schemas-protobuf>=0.3.0",
             "opencv-python",
-            "robo_orchard_schemas==0.2.0",
+            "robo_orchard_schemas==0.3.0.dev20260213135045",
+            "foxglove-sdk",
         ],
         "aux_think": [
             "transformers",
@@ -307,14 +309,47 @@ if __name__ == "__main__":
             "hydra-core",
             "deepspeed",
         ],
+        "progress_think": [
+            "transformers",
+            "tokenizers",
+            "peft",
+            "markdown2[all]",
+            "scikit-learn>=1.2.2",
+            "opencv-python",
+            "uvicorn",
+            "fastapi",
+            "timm",
+            "ninja",
+            "tyro",
+            "loguru",
+            "hydra-core",
+            "deepspeed",
+        ],
         "finegrasp": [
             "scipy",
             "einops",
             "torch-geometric",
             "open3d",
         ],
+        "mapdream": [
+            "transformers",
+            "tokenizers",
+            "peft",
+            "markdown2[all]",
+            "scikit-learn>=1.2.2",
+            "opencv-python",
+            "uvicorn",
+            "fastapi",
+            "timm",
+            "ninja",
+            "tyro",
+            "loguru",
+            "hydra-core",
+            "deepspeed",
+            "easydict",
+        ],
         "all": [
-            "robo_orchard_lab[bip3d,sem,mcap_datasets,aux_think,finegrasp]"
+            "robo_orchard_lab[bip3d,sem,mcap_datasets,aux_think,finegrasp,progress_think,mapdream]"
         ],
     }
     install_requires = wrap_github_dependency(install_requires)

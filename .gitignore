@@ -5,6 +5,7 @@ test_logs_worker_master.log
 *__git_hash__.py
 FULL_VERSION
 VERSION_POSTFIX
+.venv/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
@@ -14,7 +15,6 @@ version.py
 ## docs
 docs/sg_execution_times.rst
 docs/index.rst
-docs/readme.md
 docs/autoapi/
 docs/tutorials/dataset_tutorial/data1
 docs/tutorials/dataset_tutorial/data2
@@ -180,4 +180,5 @@ compile_commands.json
 ## Compiled MATLAB
 *.mex*
 .claude/settings.local.json
+.codex
 .env

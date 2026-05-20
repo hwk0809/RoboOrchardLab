@@ -23,10 +23,10 @@ import numpy as np
 import torch
 from robo_orchard_core.utils.config import load_config_class
 
-from robo_orchard_lab.inference.processor import (
+from robo_orchard_lab.processing.io_processor.base import (
     ClassType_co,
-    ProcessorMixin,
-    ProcessorMixinCfg,
+    ModelIOProcessor,
+    ModelIOProcessorCfg,
 )
 from robo_orchard_lab.utils.build import DelayInitDictType, build
 from robo_orchard_lab.utils.path import in_cwd
@@ -136,13 +136,11 @@ class Struct2Dict:
 
         if self.load_image:
             assert data.image is not None
-            images = [data.image[x][-1] for x in cam_names]
-            input_data["imgs"] = np.stack(images)
+            input_data["imgs"] = [data.image[x][-1] for x in cam_names]
 
         if self.load_depth:
             assert data.depth is not None
-            depth = [data.depth[x][-1] for x in cam_names]
-            input_data["depths"] = np.stack(depth)
+            input_data["depths"] = [data.depth[x][-1] for x in cam_names]
 
         input_data["text"] = (
             "" if data.instruction is None else data.instruction
@@ -160,7 +158,7 @@ class Struct2Dict:
         return input_data
 
 
-class HoloBrainProcessor(ProcessorMixin):
+class HoloBrainProcessor(ModelIOProcessor):
     cfg: "HoloBrainProcessorCfg"  # for type hint
 
     def __init__(self, cfg: "HoloBrainProcessorCfg"):
@@ -228,7 +226,7 @@ class HoloBrainProcessor(ProcessorMixin):
         return processor
 
 
-class HoloBrainProcessorCfg(ProcessorMixinCfg[HoloBrainProcessor]):
+class HoloBrainProcessorCfg(ModelIOProcessorCfg[HoloBrainProcessor]):
     class_type: ClassType_co[HoloBrainProcessor] = HoloBrainProcessor
     load_image: bool = True
     load_depth: bool = True

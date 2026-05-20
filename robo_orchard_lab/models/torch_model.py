@@ -30,16 +30,9 @@ from safetensors.torch import (
     load_model as safetensors_load_model,
     save_model as safetensors_save_model,
 )
-from transformers.modeling_utils import (
-    get_parameter_device,
-    get_parameter_dtype,
-)
 from typing_extensions import Self, deprecated
 
-from robo_orchard_lab.utils.huggingface import (
-    auto_add_repo_type,
-    download_hf_resource,
-)
+from robo_orchard_lab.utils.huggingface import resolve_hf_compatible_path
 from robo_orchard_lab.utils.path import (
     DirectoryNotEmptyError,
     abspath,
@@ -47,6 +40,10 @@ from robo_orchard_lab.utils.path import (
     is_empty_directory,
 )
 from robo_orchard_lab.utils.state import CustomizedSaveLoadMixin
+from robo_orchard_lab.utils.transformers_compat import (
+    get_module_device,
+    get_module_dtype,
+)
 
 __all__ = [
     "TorchModuleCfg",
@@ -119,11 +116,11 @@ class TorchModelMixin(
 
     @property
     def device(self) -> torch.device:
-        return get_parameter_device(self)
+        return get_module_device(self)
 
     @property
     def dtype(self) -> torch.dtype:
-        return get_parameter_dtype(self)  # type: ignore
+        return get_module_dtype(self)
 
     @property
     def accelerate_model_id(self) -> int:
@@ -404,10 +401,7 @@ class TorchModelMixin(
             ValueError: If the Hugging Face Hub URI is invalid.
         """  # noqa: E501
 
-        if directory.startswith("hf://"):
-            directory = download_hf_resource(auto_add_repo_type(directory))
-
-        directory = abspath(directory)
+        directory = abspath(resolve_hf_compatible_path(directory))
 
         if not os.path.exists(directory):
             raise FileNotFoundError(f"checkpoint {directory} does not exists!")

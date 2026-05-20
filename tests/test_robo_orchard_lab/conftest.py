@@ -13,10 +13,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+import logging
 import os
 import tempfile
+import warnings
 
 import pytest
+
+_ROBOSUITE_DEFAULT_LOG_PATH = "/tmp/robosuite.log"
+
+
+def _redirect_unwritable_robosuite_log() -> None:
+    if not os.path.exists(_ROBOSUITE_DEFAULT_LOG_PATH):
+        return
+    if os.access(_ROBOSUITE_DEFAULT_LOG_PATH, os.W_OK):
+        return
+
+    fallback_log_path = os.path.join(
+        tempfile.gettempdir(), f"robosuite-{os.getuid()}.log"
+    )
+    original_file_handler = logging.FileHandler
+
+    # robosuite hard-codes /tmp/robosuite.log during import; redirect only
+    # that path when a stale file owned by another user blocks writes.
+    class RedirectedRobosuiteFileHandler(original_file_handler):
+        def __init__(self, filename, *args, **kwargs):
+            if os.path.abspath(filename) == _ROBOSUITE_DEFAULT_LOG_PATH:
+                filename = fallback_log_path
+            super().__init__(filename, *args, **kwargs)
+
+    logging.FileHandler = RedirectedRobosuiteFileHandler
+
+
+_redirect_unwritable_robosuite_log()
 
 # import multiprocessing as mp
 # try:
@@ -32,6 +61,22 @@ try:
     torch.multiprocessing.set_sharing_strategy("file_system")
 except Exception:
     pass
+
+
+warnings.filterwarnings(
+    "ignore",
+    message=".*register_feature.*experimental.*",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=(
+        "Failed to load dataset using `datasets.load_from_disk`\\. "
+        "Falling back to use wrapped version\\."
+    ),
+    category=UserWarning,
+)
+logging.getLogger("curobo").setLevel(logging.ERROR)
 
 
 @pytest.fixture()
